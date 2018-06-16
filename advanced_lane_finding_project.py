@@ -39,11 +39,11 @@ for idx, fname in enumerate(images):
         imgpoints.append(corners)
 
         # Draw and display the corners
-        cv2.drawChessboardCorners(img, (nx,ny), corners, ret)
-        cv2.imshow('img', img)
-        cv2.waitKey(500)
+        #cv2.drawChessboardCorners(img, (nx,ny), corners, ret)
+        #cv2.imshow('img', img)
+        #cv2.waitKey(500)
 
-cv2.destroyAllWindows()
+#cv2.destroyAllWindows()
 
 test_image = cv2.imread('../camera_cal/calibration2.jpg')
 test_image_size = (test_image.shape[1], test_image.shape[0])
@@ -64,7 +64,7 @@ pickle.dump(dist_pickle, open('../camera_cal/disk_pickle2.p', 'wb'))
 def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
     img = np.copy(img)
     # Convert to HLS color space and separate the V channel
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
     l_channel = hls[:,:,1]
     s_channel = hls[:,:,2]
     # Sobel x
@@ -74,14 +74,41 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
 
     # Threshold x gradient
     sxbinary = np.zeros_like(scaled_sobel)
-    sxbinary[(scaled_sobel> s_thresh[0])&(scaled_sobel<s_thresh[1])]
+    sxbinary[(scaled_sobel>= sx_thresh[0])&(scaled_sobel<= sx_thresh[1])] = 1
 
     # Threshold color channel
     s_binnary = np.zeros_like(s_channel)
-    s_binnary[(s_channel>= s_thresh[0])& (s_channel<s_thresh[1])] = 1
+    s_binnary[(s_channel>= s_thresh[0])& (s_channel<=s_thresh[1])] = 1
     # stack each channel
-    color_binary = np.dstak((np.zeros_like(sxbinary), sxbinary, sxbinary))*255
+    color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binnary))*255
     return color_binary
+
+
+road_image = cv2.imread('../test_images/straight_lines1.jpg')
+road_image_size = (road_image.shape[1], road_image.shape[0])
+color_binary = pipeline(road_image)
+cv2.imwrite('../test_images/color_binary.png', color_binary)
+print ("Image saved")
+#cv2.imshow('Color binary', color_binary)
+#cv2.waitKey()
+#cv2.destroyAllWindws()
+
+
+############ Perspective Transform ######################
+# Manually find four points representing a trapezoid in color_binary while they should be two straight lines
+# 255,686; 1044,686; 831,544; 463,544;
+
+
+src = np.float32([(255,686), (1044,686), (831, 544), (463,544)])
+dst = np.float32([(255,686), (1044,686), (1044,544), (255,268)])
+
+M = cv2.getPerspectiveTransform(src, dst)
+warped = cv2.warpPerspective(road_image, M, test_image_size)
+cv2.imshow('warped', warped)
+cv2.waitKey()
+cv2.destroyAllWindows()
+
+
 
 
 
