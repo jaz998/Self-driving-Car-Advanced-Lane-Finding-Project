@@ -262,22 +262,24 @@ def find_lines(binary_warped):
 
 
 
-	return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx
+	return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds
+
+#
+# results = find_lines(binary_warped)
+# output_image = results[0]
+# left_fit = results[1]
+# right_fit = results[2]
+# ploty = results[3]
+# left_fitx = results[4]
+# right_fitx = results[5]
+# left_lane_inds = results[6]
+# right_lane_inds = results[7]
+#
+# cv2.imshow('result', output_image)
+# cv2.waitKey()
 
 
-results = find_lines(binary_warped)
-output_image = results[0]
-left_fit = results[1]
-right_fit = results[2]
-ploty = results[3]
-left_fitx = results[4]
-right_fitx = results[5]
-
-cv2.imshow('result', output_image)
-cv2.waitKey()
-
-
-def nextFrame (binary_warped, left_fit, right_fit, ploty = None):
+def find_lane_based_on_previous_frame (binary_warped, left_fit, right_fit, ploty = None):
 	# from the next frame of video (also called "binary_warped")
 	# It's now much easier to find line pixels!
 	nonzero = binary_warped.nonzero()
@@ -336,11 +338,19 @@ def nextFrame (binary_warped, left_fit, right_fit, ploty = None):
 	plt.ylim(720, 0)
 	plt.show()
 
-	return out_img
+	return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds
 
-nextFrame_image = nextFrame(binary_warped, left_fit, right_fit)
-cv2.imshow("Next frame", nextFrame_image)
-cv2.waitKey()
+# nextFrame_results = find_lane_based_on_previous_frame(binary_warped, left_fit, right_fit)
+# nextFrame_output_image = results[0]
+# nextFrame_left_fit = results[1]
+# nextFrame_right_fit = results[2]
+# nextFrame_ploty = results[3]
+# nextFrame_left_fitx = results[4]
+# nextFrame_right_fitx = results[5]
+# nextFrame_left_lane_inds = results[6]
+# nextFrame_right_lane_inds = results[7]
+# cv2.imshow("Next frame", nextFrame_output_image)
+# cv2.waitKey()
 
 ############################################          Draw the lines back on the original Images ######################################
 
@@ -356,7 +366,7 @@ class Line():
 		# polynomial coefficients averaged over the last n iterations
 		self.best_fit = None
 		# polynomial coefficients for the most recent fit
-		self.current_fit = [np.array([False])]
+		self.current_fit = []
 		# radius of curvature of the line in some units
 		self.radius_of_curvature = None
 		# distance in meters of vehicle center from the line
@@ -367,7 +377,43 @@ class Line():
 		self.allx = None
 		# y values for detected line pixels
 		self.ally = None
-	
+	def add_fit_lines(self, fit, inds):
+		# Add a fit line
+		if fit is not None:
+			if self.best_fit is not  None:
+				# Compare best fit and fit
+				self.diffs = abs(fit - self.best_fit)
+			if self.diffs[0] > 0.001 or \
+				self.diffs[1] > 1.0 or \
+				self.diffs[2] > 100. and \
+				len(self.current_fit) > 0:
+				# Not a good fit, abort this fit
+				self.detected = False
+			else:
+				self.detected = True
+				self.pixel_count = np.count_nonzero(inds)
+				self.current_fit.append(fit)
+				if len(self.current_fit) > 5:
+					# Abandoning the old fits
+					self.current_fit = self.current_fit[len(self.current_fit)-5:]
+				self.best_fit = np.average(self.current_fit, axis = 0)
+		# Remove one fit if there is no fit
+		else:
+			self.detected = False
+			if len(self.current_fit) > 0:
+				# Removing oldest fit
+				self.current_fit = self.current_fit[:len(self.current_fit)-1]
+			if len(self.current_fit) > 0:
+				# If there still fits left, best_fit is the average
+				self.best_fit = np.average(self.current_fit, axis = 0)
+
+
+
+
+
+
+
+
 
 
 def draw_lines_on_original(road_image, warped, ploty, left_fitx, right_fitx, Minv):
@@ -391,33 +437,67 @@ def draw_lines_on_original(road_image, warped, ploty, left_fitx, right_fitx, Min
 	return result
 
 
+
+
 # draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
 # cv2.imshow("Draw on original", draw_on_original)
 # cv2.waitKey()
 
 ############# Process the video #####################################
+left_lane = Line()
+right_lane = Line()
+
+
+
 def process_frame(frame):
-	color_binary = pipeline(frame)
-	warped = warp(color_binary, src, dst)
-	binary_warped = warped[:, :, 1]
-	results = find_lines(binary_warped)
-	output_image = results[0]
-	left_fit = results[1]
-	right_fit = results[2]
-	ploty = results[3]
-	left_fitx = results[4]
-	right_fitx = results[5]
-	draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
-	return draw_on_original
+	# if both left and right lanes were detected in last fame, use nextFrame function, if not, use normal processing flow
+    draw_on_original = None
+    if not left_lane.detected or not right_lane.detected:
+        color_binary = pipeline(frame)
+        warped = warp(color_binary, src, dst)
+        binary_warped = warped[:, :, 1]
+        results = find_lines(binary_warped)
+        output_image = results[0]
+        left_fit = results[1]
+        right_fit = results[2]
+        ploty = results[3]
+        left_fitx = results[4]
+        right_fitx = results[5]
+        left_lane_inds = results[6]
+        right_lane_inds = results[7]
+        draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+    else:
+        color_binary = pipeline(frame)
+        warped = warp(color_binary, src, dst)
+        binary_warped = warped[:, :, 1]
+        results = find_lane_based_on_previous_frame(binary_warped,left_lane.current_fit,right_lane.current_fit)
+        output_image = results[0]
+        left_fit = results[1]
+        right_fit = results[2]
+        ploty = results[3]
+        left_fitx = results[4]
+        right_fitx = results[5]
+        left_lane_inds = results[6]
+        right_lane_inds = results[7]
+        draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+    left_lane.add_fit_lines(left_fit, left_lane_inds)
+    right_lane.add_fit_lines(right_fit, right_lane_inds)
+
+    return draw_on_original
+
+
 
 
 output_video = '../test_videos_output/output_video.mp4'
 project_video = '../project_video.mp4'
-clip1 = VideoFileClip(project_video).subclip(0,15)
+clip1 = VideoFileClip(project_video).subclip(0,3)
+processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
+processed_clip1.write_videofile(output_video, audio=False)
 
-result_process_frame = process_frame(road_image)
-cv2.imshow("Result processed frame", result_process_frame)
-cv2.waitKey()
+# result_process_frame = process_frame(road_image)
+# cv2.imshow("Result processed frame", result_process_frame)
+# cv2.waitKey()
+
 
 
 
