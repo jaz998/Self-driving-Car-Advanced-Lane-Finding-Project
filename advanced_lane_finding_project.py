@@ -122,6 +122,10 @@ dst = np.float32([
 	(offset2,0)
 ])
 
+MinV = cv2.getPerspectiveTransform(dst, src)
+
+
+
 def warp(img, src, dst):
 	M = cv2.getPerspectiveTransform(src, dst)
 	warped = cv2.warpPerspective(img, M, (img.shape[1], img.shape[0]))
@@ -258,19 +262,22 @@ def find_lines(binary_warped):
 
 
 
-	return out_img, left_fit, right_fit
+	return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx
 
 
 results = find_lines(binary_warped)
 output_image = results[0]
 left_fit = results[1]
 right_fit = results[2]
+ploty = results[3]
+left_fitx = results[4]
+right_fitx = results[5]
 
 cv2.imshow('result', output_image)
 cv2.waitKey()
 
 
-def nextFrame (binary_warped, left_fit, right_fit):
+def nextFrame (binary_warped, left_fit, right_fit, ploty = None):
 	# from the next frame of video (also called "binary_warped")
 	# It's now much easier to find line pixels!
 	nonzero = binary_warped.nonzero()
@@ -335,7 +342,91 @@ nextFrame_image = nextFrame(binary_warped, left_fit, right_fit)
 cv2.imshow("Next frame", nextFrame_image)
 cv2.waitKey()
 
+############################################          Draw the lines back on the original Images ######################################
+
+# Define a class to receive the characteristics of each line detection
+class Line():
+	def __init__(self):
+		# Was the line detected in the last iteration?
+		self.detected = False
+		# x values of the last n fits of the line
+		self.recent_xfitted = []
+		# average x values of the fitted line over the last n iterations
+		self.bestx = None
+		# polynomial coefficients averaged over the last n iterations
+		self.best_fit = None
+		# polynomial coefficients for the most recent fit
+		self.current_fit = [np.array([False])]
+		# radius of curvature of the line in some units
+		self.radius_of_curvature = None
+		# distance in meters of vehicle center from the line
+		self.line_base_pos = None
+		# difference in fit coefficients between last and new fits
+		self.diffs = np.array([0, 0, 0], dtype='float')
+		# x values for detected line pixels
+		self.allx = None
+		# y values for detected line pixels
+		self.ally = None
+	
+
+
+def draw_lines_on_original(road_image, warped, ploty, left_fitx, right_fitx, Minv):
+	# Create an image to draw the lines on
+	warp_zero = np.zeros_like(warped).astype(np.uint8)
+	color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+	# Recast the x and y points into usable format for cv2.fillPoly()
+	pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+	pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+	pts = np.hstack((pts_left, pts_right))
+
+	# Draw the lane onto the warped blank image
+	cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+	# Warp the blank back to original image space using inverse perspective matrix (Minv)
+	newwarp = cv2.warpPerspective(color_warp, Minv, (road_image.shape[1], road_image.shape[0]))
+	# Combine the result with the original image
+	result = cv2.addWeighted(road_image, 1, newwarp, 0.3, 0)
+	plt.imshow(result)
+	return result
+
+
+# draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+# cv2.imshow("Draw on original", draw_on_original)
+# cv2.waitKey()
+
 ############# Process the video #####################################
+def process_frame(frame):
+	color_binary = pipeline(frame)
+	warped = warp(color_binary, src, dst)
+	binary_warped = warped[:, :, 1]
+	results = find_lines(binary_warped)
+	output_image = results[0]
+	left_fit = results[1]
+	right_fit = results[2]
+	ploty = results[3]
+	left_fitx = results[4]
+	right_fitx = results[5]
+	draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+	return draw_on_original
+
+
+output_video = '../test_videos_output/output_video.mp4'
+project_video = '../project_video.mp4'
+clip1 = VideoFileClip(project_video).subclip(0,15)
+
+result_process_frame = process_frame(road_image)
+cv2.imshow("Result processed frame", result_process_frame)
+cv2.waitKey()
+
+
+
+
+
+
+
+
+
 
 
 
