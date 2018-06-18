@@ -168,7 +168,6 @@ def find_lines(binary_warped):
 	histogram = np.sum(binary_warped[binary_warped.shape[0] // 2:, :], axis=0)
 	# Create an output image to draw on and  visualize the result
 	out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
-	print('out_img ', out_img)
 	# Find the peak of the left and right halves of the histogram
 	# These will be the starting point for the left and right lines
 	midpoint = np.int(histogram.shape[0] // 2)
@@ -248,6 +247,14 @@ def find_lines(binary_warped):
 	plt.plot(right_fitx, ploty, color='yellow')
 	plt.xlim(0, 1280)
 	plt.ylim(720, 0)
+
+	# Measuring Curvature
+	y_eval = np.max(ploty)
+	left_curverad = ((1 + (2 * left_fit[0] * y_eval + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
+	right_curverad = ((1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
+	print("Left curvature:", left_curverad, " Right Curvature:", right_curverad)
+
+
 
 	return out_img
 
