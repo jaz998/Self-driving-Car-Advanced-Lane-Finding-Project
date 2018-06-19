@@ -85,15 +85,15 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
     return color_binary
 
 
-road_image = cv2.imread('../test_images/test2.jpg')
+road_image = cv2.imread('../test_images/test1.jpg')
 #road_image = cv2.imread('C:/Users/Jason/OneDrive/Self-driving Car/Advanced Lane Finding Project/CarND-Advanced-Lane-Lines-master/test_images/straight_lines1.jpg')
 
 road_image_size = (road_image.shape[1], road_image.shape[0])
 color_binary = pipeline(road_image)
 cv2.imwrite('../test_images/color_binary.png', color_binary)
 print ("Image saved")
-#cv2.imshow('Color binary', color_binary)
-#cv2.waitKey()
+cv2.imshow('Color binary', color_binary)
+cv2.waitKey()
 #cv2.destroyAllWindws()
 
 
@@ -274,9 +274,9 @@ left_fitx = results[4]
 right_fitx = results[5]
 left_lane_inds = results[6]
 right_lane_inds = results[7]
-#
-# cv2.imshow('result', output_image)
-# cv2.waitKey()
+
+cv2.imshow('Find lane', output_image)
+cv2.waitKey()
 
 
 def find_lane_based_on_previous_frame (binary_warped, left_fit, right_fit, ploty = None):
@@ -382,10 +382,13 @@ class Line():
         # y values for detected line pixels
         self.ally = None
     def add_fit_lines(self, fit, inds):
-        # Add a fit line
+        # Add a fit line, up to n
         if fit is not None:
             self.detected = True
             self.current_fit = fit
+        else:
+            self.detected = False
+
 
 
 
@@ -420,9 +423,9 @@ def draw_lines_on_original(road_image, warped, ploty, left_fitx, right_fitx, Min
 
 
 
-# draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
-# cv2.imshow("Draw on original", draw_on_original)
-# cv2.waitKey()
+draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+cv2.imshow("Draw on original", draw_on_original)
+cv2.waitKey()
 
 ############# Process the video #####################################
 left_lane = Line()
@@ -494,12 +497,12 @@ def process_frame(frame):
 
 
 
-output_video = '../test_videos_output/output_video.mp4'
-project_video = '../project_video.mp4'
-#clip1 = VideoFileClip(project_video).subclip(0,3)
-clip1 = VideoFileClip(project_video)
-processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
-processed_clip1.write_videofile(output_video, audio=False)
+# output_video = '../test_videos_output/output_video.mp4'
+# project_video = '../project_video.mp4'
+# #clip1 = VideoFileClip(project_video).subclip(0,3)
+# clip1 = VideoFileClip(project_video).subclip(20, 25)
+# processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
+# processed_clip1.write_videofile(output_video, audio=False)
 
 # result_process_frame = process_frame(road_image)
 # cv2.imshow("Result processed frame", result_process_frame)
