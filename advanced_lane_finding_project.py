@@ -62,10 +62,65 @@ dist_pickle["dist"] = dist
 pickle.dump(dist_pickle, open('../camera_cal/disk_pickle2.p', 'wb'))
 
 ################## Color/gradient threshold ###################
+# def region_of_interest(img, vertices):
+#     """
+#     Applies an image mask.
+#     """
+#     # defining a blank mask to start with
+#     mask = np.zeros_like(img)
+#
+#     # defining a 3 channel or 1 channel color to fill the mask with depending on the input image
+#     if len(img.shape) > 2:
+#         channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
+#         ignore_mask_color = (255,) * channel_count
+#     else:
+#         ignore_mask_color = 255
+#
+#     # filling pixels inside the polygon defined by "vertices" with the fill color
+#     cv2.fillPoly(mask, vertices, ignore_mask_color)
+#
+#     # returning the image only where mask pixels are nonzero
+#     masked_image = cv2.bitwise_and(img, mask)
+#     return masked_image
+
+#LAB Colorspace, use B channel to capture yellow line
+def LABcolorspace_bChannel(img, thresh=(190,255)):
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+    b_channel = lab[:,:,2]
+    # Only normalize when there are yellows in the image
+    if np.max(b_channel) > 175:
+        b_channel = b_channel * (255/np.max(b_channel))
+    # Apply threshold to the b_channel
+    binary_output = np.zeros_like(b_channel)
+    binary_output[((b_channel > thresh[0]) & (b_channel <= thresh[1]))] = 1
+    return binary_output
+
+#HLS Colorspace, use L channel to capture the white lines
+def HLScolorspace_LChannel(img, thresh=(220,255)):
+    # Convert the image to HLS color space
+    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    lChannel = hls[:,:,1]
+    # Normalize
+    lChannel = lChannel*(255/np.max(lChannel))
+    # Applying the threshold
+    binary_output = np.zeros_like(lChannel)
+    binary_output[(lChannel>thresh[0]) & (lChannel<=thresh[1])] = 1
+    # Return a binary image of threshold result
+    return  binary_output
+
+
+
+
+
+
+
+
+
 def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
     img = np.copy(img)
     # Convert to HLS color space and separate the V channel
-    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    hls_l = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    lab_b_channel = LABcolorspace_bChannel(img)
     l_channel = hls[:,:,1]
     s_channel = hls[:,:,2]
     # Sobel x
@@ -79,9 +134,28 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
 
     # Threshold color channel
     s_binnary = np.zeros_like(s_channel)
-    s_binnary[(s_channel>= s_thresh[0])& (s_channel<=s_thresh[1])] = 1
+    s_binnary[(s_channel>= s_thresh[0])& (s_channel<=s_thresh[1]) | (lab_b_channel==1)] = 1
+
     # stack each channel
     color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binnary))*255
+
+
+
+    # # Defining vertices for marked area
+    # imshape = img.shape
+    # left_bottom = (100, imshape[0])
+    # right_bottom = (imshape[1] - 20, imshape[0])
+    # apex1 = (610, 410)
+    # apex2 = (680, 410)
+    # inner_left_bottom = (310, imshape[0])
+    # inner_right_bottom = (1150, imshape[0])
+    # inner_apex1 = (700, 480)
+    # inner_apex2 = (650, 480)
+    # vertices = np.array([[left_bottom, apex1, apex2, \
+    #                       right_bottom, inner_right_bottom, \
+    #                       inner_apex1, inner_apex2, inner_left_bottom]], dtype=np.int32)
+    # # Masked area
+    # color_binary = region_of_interest(color_binary, vertices)
     return color_binary
 
 
@@ -89,12 +163,23 @@ road_image = cv2.imread('../test_images/test1.jpg')
 #road_image = cv2.imread('C:/Users/Jason/OneDrive/Self-driving Car/Advanced Lane Finding Project/CarND-Advanced-Lane-Lines-master/test_images/straight_lines1.jpg')
 
 road_image_size = (road_image.shape[1], road_image.shape[0])
+img_size = (road_image.shape[1], road_image.shape[0])
 color_binary = pipeline(road_image)
 cv2.imwrite('../test_images/color_binary.png', color_binary)
 print ("Image saved")
 cv2.imshow('Color binary', color_binary)
 cv2.waitKey()
 #cv2.destroyAllWindws()
+
+lChannel = HLScolorspace_LChannel(road_image)
+cv2.imshow("L channel", lChannel)
+cv2.waitKey
+
+b_channel = LABcolorspace_bChannel(road_image)
+cv2.imshow("b_channel", b_channel)
+cv2.waitKey()
+
+
 
 
 ############ Perspective Transform ######################
@@ -104,23 +189,54 @@ cv2.waitKey()
 
 height, width = undist.shape[:2]
 print("Height:", height, " Width:", width)
-offest1 = 0
+offest1 = 70
 # offset2 = 450
 offset2 = 400
 
-src = np.float32([
-    (255 - offest1, 686),
-    (1044 + offest1, 686),
-    (682 + offest1, 448),
-    (599 - offest1, 448)
-])
+# src = np.float32([
+#     (255 - offest1, 686),
+#     (1044 + offest1, 686),
+#     (682 + offest1, 448),
+#     (599 - offest1, 448)
+# ])
+#
+# dst = np.float32([
+#     (offset2,height),
+#     (width-offset2,height),
+#     (width-offset2, 0),
+#     (offset2,0)
+# ])
 
-dst = np.float32([
-    (offset2,height),
-    (width-offset2,height),
-    (width-offset2, 0),
-    (offset2,0)
-])
+# src = np.float32([
+#     (255 - offest1, 686),
+#     (1044 + offest1, 686),
+#     (831 + offest1, 544),
+#     (463 - offest1, 544)
+# ])
+#
+# dst = np.float32([
+#     (offset2,height),
+#     (width-offset2,height),
+#     (width-offset2, 0),
+#     (offset2,0)
+# ])
+# offset1 = 200  # offset for dst points x value
+# offset2 = 0  # offset for dst points bottom y value
+# offset3 = 0  # offset for dst points top y value
+# src = np.float32([[150+430,460],[1150-440,460],[1150,720],[150,720]])
+# dst = np.float32([[offset1, offset3],
+#                   [img_size[0] - offset1, offset3],
+#                   [img_size[0] - offset1, img_size[1] - offset2],
+#                   [offset1, img_size[1] - offset2]])
+
+src = np.float32([(575,464),
+                  (707,464),
+                  (258,682),
+                  (1049,682)])
+dst = np.float32([(450,0),
+                  (width-450,0),
+                  (450,height),
+                  (width-450,height)])
 
 MinV = cv2.getPerspectiveTransform(dst, src)
 
@@ -144,14 +260,14 @@ def warp(img, src, dst):
 # M = cv2.getPerspectiveTransform(src, dst)
 # warped = cv2.warpPerspective(color_binary, M, (color_binary.shape[1], color_binary.shape[0]))
 warped = warp(color_binary, src, dst)
-# cv2.imwrite('../test_images/warped.png', warped)
-# cv2.imshow('warped', warped)
-# cv2.waitKey()
-# cv2.destroyAllWindows()
-# cv2.imshow('Color_binary', warped)
+cv2.imwrite('../test_images/warped.png', warped)
+cv2.imshow('warped', warped)
+cv2.waitKey()
+cv2.destroyAllWindows()
+cv2.imshow('Color_binary', warped)
 print("warped shape ", warped.shape)
 binary_warped = warped[:,:,1]
-
+cv2.imshow('binary_warped', binary_warped)
 
 
 
@@ -497,10 +613,11 @@ def process_frame(frame):
 
 
 
-# output_video = '../test_videos_output/output_video.mp4'
-# project_video = '../project_video.mp4'
-# #clip1 = VideoFileClip(project_video).subclip(0,3)
-# clip1 = VideoFileClip(project_video).subclip(20, 25)
+output_video = '../test_videos_output/output_video.mp4'
+project_video = '../project_video.mp4'
+#clip1 = VideoFileClip(project_video).subclip(0,3)
+#clip1 = VideoFileClip(project_video).subclip(20, 25)
+# clip1 = VideoFileClip(project_video)
 # processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
 # processed_clip1.write_videofile(output_video, audio=False)
 
