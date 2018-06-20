@@ -62,30 +62,32 @@ dist_pickle["dist"] = dist
 pickle.dump(dist_pickle, open('../camera_cal/disk_pickle2.p', 'wb'))
 
 ################## Color/gradient threshold ###################
-# def region_of_interest(img, vertices):
-#     """
-#     Applies an image mask.
-#     """
-#     # defining a blank mask to start with
-#     mask = np.zeros_like(img)
-#
-#     # defining a 3 channel or 1 channel color to fill the mask with depending on the input image
-#     if len(img.shape) > 2:
-#         channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
-#         ignore_mask_color = (255,) * channel_count
-#     else:
-#         ignore_mask_color = 255
-#
-#     # filling pixels inside the polygon defined by "vertices" with the fill color
-#     cv2.fillPoly(mask, vertices, ignore_mask_color)
-#
-#     # returning the image only where mask pixels are nonzero
-#     masked_image = cv2.bitwise_and(img, mask)
-#     return masked_image
+def region_of_interest(img, vertices):
+    """
+    Applies an image mask.
+    """
+    # defining a blank mask to start with
+    mask = np.zeros_like(img)
+
+    # defining a 3 channel or 1 channel color to fill the mask with depending on the input image
+    if len(img.shape) > 2:
+        channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
+        ignore_mask_color = (255,) * channel_count
+    else:
+        ignore_mask_color = 255
+
+    # filling pixels inside the polygon defined by "vertices" with the fill color
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
+
+    # returning the image only where mask pixels are nonzero
+    masked_image = cv2.bitwise_and(img, mask)
+    return masked_image
 
 #LAB Colorspace, use B channel to capture yellow line
 def LABcolorspace_bChannel(img, thresh=(190,255)):
-    lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+    # lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab)
+
     b_channel = lab[:,:,2]
     # Only normalize when there are yellows in the image
     if np.max(b_channel) > 175:
@@ -98,7 +100,8 @@ def LABcolorspace_bChannel(img, thresh=(190,255)):
 #HLS Colorspace, use L channel to capture the white lines
 def HLScolorspace_LChannel(img, thresh=(220,255)):
     # Convert the image to HLS color space
-    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    # hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     lChannel = hls[:,:,1]
     # Normalize
     lChannel = lChannel*(255/np.max(lChannel))
@@ -119,12 +122,22 @@ def HLScolorspace_LChannel(img, thresh=(220,255)):
 def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
     img = np.copy(img)
     # Convert to HLS color space and separate the V channel
-    hls_l = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-    lab_b_channel = LABcolorspace_bChannel(img)
-    l_channel = hls[:,:,1]
-    s_channel = hls[:,:,2]
+    # hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    # lab_b_channel = LABcolorspace_bChannel(img2)
+    # l_channel = hls[:,:,1]
+    # s_channel = hls[:,:,2]
+    hls_lChannel = HLScolorspace_LChannel(img)
+    lab_bChannel = LABcolorspace_bChannel(img)
+    combined = np.zeros_like(hls_lChannel)
+    combined[(hls_lChannel==1) | (lab_bChannel==1)] = 1
+
+
+
+
     # Sobel x
-    sobelx = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0) # take the derivative in x
+    #sobelx = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0) # take the derivative in x
+    sobelx = cv2.Sobel(combined, cv2.CV_64F, 1, 0) # take the derivative in x
+
     abs_sobelx = np.absolute(sobelx)
     scaled_sobel = np.uint8(255*abs_sobelx/np.max(abs_sobelx))
 
@@ -133,51 +146,53 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
     sxbinary[(scaled_sobel>= sx_thresh[0])&(scaled_sobel<= sx_thresh[1])] = 1
 
     # Threshold color channel
-    s_binnary = np.zeros_like(s_channel)
-    s_binnary[(s_channel>= s_thresh[0])& (s_channel<=s_thresh[1]) | (lab_b_channel==1)] = 1
+    # s_binnary = np.zeros_like(s_channel)
+    # s_binnary[(s_channel>= s_thresh[0])& (s_channel<=s_thresh[1])] = 1
+    s_binnary = np.zeros_like(combined)
+    s_binnary[(combined>= s_thresh[0])& (combined<=s_thresh[1])] = 1
 
     # stack each channel
     color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binnary))*255
 
 
 
-    # # Defining vertices for marked area
-    # imshape = img.shape
-    # left_bottom = (100, imshape[0])
-    # right_bottom = (imshape[1] - 20, imshape[0])
-    # apex1 = (610, 410)
-    # apex2 = (680, 410)
-    # inner_left_bottom = (310, imshape[0])
-    # inner_right_bottom = (1150, imshape[0])
-    # inner_apex1 = (700, 480)
-    # inner_apex2 = (650, 480)
-    # vertices = np.array([[left_bottom, apex1, apex2, \
-    #                       right_bottom, inner_right_bottom, \
-    #                       inner_apex1, inner_apex2, inner_left_bottom]], dtype=np.int32)
-    # # Masked area
-    # color_binary = region_of_interest(color_binary, vertices)
+    #Defining vertices for marked area
+    imshape = img.shape
+    left_bottom = (100, imshape[0])
+    right_bottom = (imshape[1] - 20, imshape[0])
+    apex1 = (610, 410)
+    apex2 = (680, 410)
+    inner_left_bottom = (310, imshape[0])
+    inner_right_bottom = (1150, imshape[0])
+    inner_apex1 = (700, 480)
+    inner_apex2 = (650, 480)
+    vertices = np.array([[left_bottom, apex1, apex2, \
+                          right_bottom, inner_right_bottom, \
+                          inner_apex1, inner_apex2, inner_left_bottom]], dtype=np.int32)
+    # Masked area
+    color_binary = region_of_interest(color_binary, vertices)
     return color_binary
 
 
-road_image = cv2.imread('../test_images/test1.jpg')
+road_image = cv2.imread('../test_images/test6.jpg')
 #road_image = cv2.imread('C:/Users/Jason/OneDrive/Self-driving Car/Advanced Lane Finding Project/CarND-Advanced-Lane-Lines-master/test_images/straight_lines1.jpg')
 
 road_image_size = (road_image.shape[1], road_image.shape[0])
 img_size = (road_image.shape[1], road_image.shape[0])
 color_binary = pipeline(road_image)
 cv2.imwrite('../test_images/color_binary.png', color_binary)
-print ("Image saved")
-cv2.imshow('Color binary', color_binary)
-cv2.waitKey()
-#cv2.destroyAllWindws()
-
-lChannel = HLScolorspace_LChannel(road_image)
-cv2.imshow("L channel", lChannel)
-cv2.waitKey
-
-b_channel = LABcolorspace_bChannel(road_image)
-cv2.imshow("b_channel", b_channel)
-cv2.waitKey()
+# print ("Image saved")
+# cv2.imshow('Color binary', color_binary)
+# cv2.waitKey()
+# #cv2.destroyAllWindws()
+#
+# lChannel = HLScolorspace_LChannel(road_image)
+# cv2.imshow("L channel", lChannel)
+# cv2.waitKey
+#
+# b_channel = LABcolorspace_bChannel(road_image)
+# cv2.imshow("b_channel", b_channel)
+# cv2.waitKey()
 
 
 
@@ -228,7 +243,7 @@ offset2 = 400
 #                   [img_size[0] - offset1, offset3],
 #                   [img_size[0] - offset1, img_size[1] - offset2],
 #                   [offset1, img_size[1] - offset2]])
-
+#
 src = np.float32([(575,464),
                   (707,464),
                   (258,682),
@@ -259,15 +274,15 @@ def warp(img, src, dst):
 
 # M = cv2.getPerspectiveTransform(src, dst)
 # warped = cv2.warpPerspective(color_binary, M, (color_binary.shape[1], color_binary.shape[0]))
-warped = warp(color_binary, src, dst)
-cv2.imwrite('../test_images/warped.png', warped)
-cv2.imshow('warped', warped)
-cv2.waitKey()
-cv2.destroyAllWindows()
-cv2.imshow('Color_binary', warped)
-print("warped shape ", warped.shape)
-binary_warped = warped[:,:,1]
-cv2.imshow('binary_warped', binary_warped)
+# warped = warp(color_binary, src, dst)
+# cv2.imwrite('../test_images/warped.png', warped)
+# cv2.imshow('warped', warped)
+# cv2.waitKey()
+# cv2.destroyAllWindows()
+# cv2.imshow('Color_binary', warped)
+# print("warped shape ", warped.shape)
+# binary_warped = warped[:,:,1]
+# cv2.imshow('binary_warped', binary_warped)
 
 
 
@@ -287,6 +302,8 @@ def find_lines(binary_warped):
 
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[binary_warped.shape[0] // 2:, :], axis=0)
+    plt.plot(histogram)
+    plt.show()
     # Create an output image to draw on and  visualize the result
     out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
     # Find the peak of the left and right halves of the histogram
@@ -348,11 +365,14 @@ def find_lines(binary_warped):
 
     # Extract left and right line pixel positions
     leftx = nonzerox[left_lane_inds]
+    print("left_lane_inds ", left_lane_inds)
     lefty = nonzeroy[left_lane_inds]
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds]
 
     # Fit a second order polynomial to each
+    print("lefty", lefty)
+    print("leftx", leftx)
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
 
@@ -381,18 +401,18 @@ def find_lines(binary_warped):
     return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds
 
 
-results = find_lines(binary_warped)
-output_image = results[0]
-left_fit = results[1]
-right_fit = results[2]
-ploty = results[3]
-left_fitx = results[4]
-right_fitx = results[5]
-left_lane_inds = results[6]
-right_lane_inds = results[7]
-
-cv2.imshow('Find lane', output_image)
-cv2.waitKey()
+# results = find_lines(binary_warped)
+# output_image = results[0]
+# left_fit = results[1]
+# right_fit = results[2]
+# ploty = results[3]
+# left_fitx = results[4]
+# right_fitx = results[5]
+# left_lane_inds = results[6]
+# right_lane_inds = results[7]
+#
+# cv2.imshow('Find lane', output_image)
+# cv2.waitKey()
 
 
 def find_lane_based_on_previous_frame (binary_warped, left_fit, right_fit, ploty = None):
@@ -538,10 +558,10 @@ def draw_lines_on_original(road_image, warped, ploty, left_fitx, right_fitx, Min
 
 
 
-
-draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
-cv2.imshow("Draw on original", draw_on_original)
-cv2.waitKey()
+#
+# draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+# cv2.imshow("Draw on original", draw_on_original)
+# cv2.waitKey()
 
 ############# Process the video #####################################
 left_lane = Line()
@@ -553,11 +573,26 @@ def process_frame(frame):
     # if both left and right lanes were detected in last fame, use nextFrame function, if not, use normal processing flow
     # draw_on_original = None
     frameCount = 0
+    cv2.imshow("frame", frame)
+    #cv2.waitKey()
     if not left_lane.detected or not right_lane.detected:
+        print("Normal process frame is called")
+        print("calling pipeline")
         color_binary = pipeline(frame)
+        cv2.imshow("Color_binary", color_binary)
+     #   cv2.waitKey()
+        print("calling warped")
         warped = warp(color_binary, src, dst)
+        cv2.imshow("warped", warped)
+      #  cv2.waitKey()
+        print('converting binary_warped to gray')
         binary_warped = warped[:, :, 1]
+        cv2.imshow("binary_warped", binary_warped)
+       # cv2.waitKey()
+        #binary_warped = warped
+        print("calling find_lines")
         results = find_lines(binary_warped)
+        print('assigning results')
         output_image = results[0]
         left_fit = results[1]
         right_fit = results[2]
@@ -567,9 +602,11 @@ def process_frame(frame):
         left_lane_inds = results[6]
         right_lane_inds = results[7]
         draw_on_original = draw_lines_on_original(frame, binary_warped, ploty, left_fitx, right_fitx, MinV)
-        print("Normal process frame is called")
     else:
+        print("Process frame that is based on the previous frame is called")
+        print("calling pipeline function")
         color_binary = pipeline(frame)
+        print("calling warped function")
         warped = warp(color_binary, src, dst)
         binary_warped = warped[:, :, 1]
         results = find_lane_based_on_previous_frame(binary_warped, left_lane.current_fit, right_lane.current_fit)
@@ -582,7 +619,6 @@ def process_frame(frame):
         left_lane_inds = results[6]
         right_lane_inds = results[7]
         draw_on_original = draw_lines_on_original(frame, binary_warped, ploty, left_fitx, right_fitx, MinV)
-        print("Process frame that is based on the previous frame is called")
     left_lane.add_fit_lines(left_fit, left_lane_inds)
     print("left_fit ", left_fit)
     print("left_lane_inds", left_lane_inds)
@@ -608,7 +644,10 @@ def process_frame(frame):
     # left_lane.add_fit_lines(left_fit, left_lane_inds)
     # right_lane.add_fit_lines(right_fit, right_lane_inds)
 
-
+#
+# processed_frame_img = process_frame(road_image)
+# cv2.imshow("processed_frame_img", processed_frame_img)
+# cv2.waitKey()
 
 
 
@@ -616,10 +655,11 @@ def process_frame(frame):
 output_video = '../test_videos_output/output_video.mp4'
 project_video = '../project_video.mp4'
 #clip1 = VideoFileClip(project_video).subclip(0,3)
-#clip1 = VideoFileClip(project_video).subclip(20, 25)
-# clip1 = VideoFileClip(project_video)
-# processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
-# processed_clip1.write_videofile(output_video, audio=False)
+#clip1 = VideoFileClip(project_video).subclip(38, 42)
+clip1 = VideoFileClip(project_video)
+print("###################Now running processing frame - video#######")
+processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
+processed_clip1.write_videofile(output_video, audio=False)
 
 # result_process_frame = process_frame(road_image)
 # cv2.imshow("Result processed frame", result_process_frame)
