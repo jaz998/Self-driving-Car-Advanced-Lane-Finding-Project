@@ -46,7 +46,7 @@ Original Image             |  Undistort Image
 
 ### Pipeline (single images)
 
-#### 1. Color transforms , gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+#### 1. Color transforms , gradients or other methods to create a thresholded binary image.  
 
 I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 86 through 112, lines 141 to 193). I pick b channel of LAB color space to capture yellow lines (see lines 86 through 98) and the l channel in HLS color space to capture white lines (see line 101 through 112)
 
@@ -54,55 +54,52 @@ I apply a triangle shape mask to capture the area directly in front of the car. 
 
 Here's an example of my output for this step. 
 
-Original Image             |Color Transform &Gradient  |Region of interest mask    |
+Original Image             |Color Transform &Gradient  |Region of interest mask   |
 :-------------------------:|:-------------------------:|-------------------------:|
-![](images/test1.jpg)      |![](images/gradient.jpg)| ![](images/regionOfInterest.jpg)
+![](images/test1.jpg)      |![](images/gradient.jpg)   | ![](images/regionOfInterest.jpg)
 
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
+#### 3. Perspective transform.
 
-The code for my perspective transform includes a function called `warp(img, src, dst)`, which appears in lines 279 through 282 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform includes a function called `warp(img, src, dst)`, which appears in lines 284 through 287.  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+src = np.float32([(575,464),
+                  (707,464),
+                  (258,682),
+                  (1049,682)])
+dst = np.float32([(450,0),
+                  (width-450,0),
+                  (450,height),
+                  (width-450,height)])
 ```
 
-This resulted in the following source and destination points:
-
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
-![alt text][image4]
 
-#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+Original Image             |  Warped Image
+:-------------------------:|:-------------------------:
+![](images/straight_lines1.jpg)|  ![](images/warped.png)
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
 
-![alt text][image5]
+#### 4. Identifying lane-line pixels and fit their positions with a polynomial
 
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+Refer function find_lines() and def find_lane_based_on_previous_frame() - lines 321 through 552. 
 
-I did this in lines # through # in my code in `my_other_file.py`
 
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+#### 5. Radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+Refer lines 414 to 442
 
-![alt text][image6]
+#### 6. An example image of my result plotted back down onto the road such that the lane area is identified clearly.
+
+Original Image             |Histogram for lanes        |Sliding Windows to identify lanes  |
+:-------------------------:|:-------------------------:|-------------------------:|
+![](images/test1.jpg)      |![](images/Figure_1.png)   | ![](images/findLane.png)
+
+Plotted on road             |  
+:-------------------------:|
+![](images/plot_on_road.png)|  
 
 ---
 
@@ -110,7 +107,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](video./project_video.mp4)
 
 ---
 
@@ -118,4 +115,6 @@ Here's a [link to my video result](./project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+I think the pipeline might fail when the lanes are marked in colors other than yellow and light. A solution to this is to include filters to identify more colors. 
+
+In addition, if the lanes are not directly in front of the car the pipeline may fail too.  
