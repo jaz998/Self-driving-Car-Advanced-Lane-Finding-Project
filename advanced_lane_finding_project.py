@@ -221,11 +221,11 @@ cv2.imwrite('../test_images/color_binary.png', color_binary)
 # trapezoid points 1: 255,686; 1044,686; 831,544; 463,544;
 # trapezoid points 2: 255,686; 1044,686; 682,448; 599,448;
 
-height, width = undist.shape[:2]
-print("Height:", height, " Width:", width)
-offest1 = 70
-# offset2 = 450
-offset2 = 400
+# height, width = undist.shape[:2]
+# print("Height:", height, " Width:", width)
+# offest1 = 70
+# # offset2 = 450
+# offset2 = 400
 
 # src = np.float32([
 #     (255 - offest1, 686),
@@ -736,7 +736,7 @@ project_video = '../project_video.mp4'
 #clip1 = VideoFileClip(project_video).subclip(0,3)
 #clip1 = VideoFileClip(project_video).subclip(38, 42)
 clip1 = VideoFileClip(project_video)
-print("###################Now running processing frame - video#######")
+#print("###################Now running processing frame - video#######")
 processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
 processed_clip1.write_videofile(output_video, audio=False)
 
