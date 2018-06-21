@@ -85,8 +85,8 @@ def region_of_interest(img, vertices):
 
 #LAB Colorspace, use B channel to capture yellow line
 def LABcolorspace_bChannel(img, thresh=(190,255)):
-    # lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
-    lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab)
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+    #lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab)
 
     b_channel = lab[:,:,2]
     # Only normalize when there are yellows in the image
@@ -100,8 +100,8 @@ def LABcolorspace_bChannel(img, thresh=(190,255)):
 #HLS Colorspace, use L channel to capture the white lines
 def HLScolorspace_LChannel(img, thresh=(220,255)):
     # Convert the image to HLS color space
-    # hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    #hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     lChannel = hls[:,:,1]
     # Normalize
     lChannel = lChannel*(255/np.max(lChannel))
@@ -149,9 +149,9 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
     lab_bChannel = LABcolorspace_bChannel(img)
     combined = np.zeros_like(hls_lChannel)
     combined[(hls_lChannel==1) | (lab_bChannel==1)] = 1
-
-
-
+    cv2.imshow('Combined', combined)
+    cv2.waitKey()
+    cv2.imwrite('./images/colorChannel.jpg', combined)
 
     # Sobel x
     #sobelx = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0) # take the derivative in x
@@ -172,6 +172,7 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
 
     # stack each channel
     color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binnary))*255
+    cv2.imwrite('./images/gradient.jpg', color_binary)
 
 
 
@@ -190,28 +191,29 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
                           inner_apex1, inner_apex2, inner_left_bottom]], dtype=np.int32)
     # Masked area
     color_binary = region_of_interest(color_binary, vertices)
+    cv2.imwrite('./images/regionOfInterest.jpg', color_binary)
     return color_binary
 
 
-road_image = cv2.imread('../test_images/test6.jpg')
+road_image = cv2.imread('../test_images/test1.jpg')
 #road_image = cv2.imread('C:/Users/Jason/OneDrive/Self-driving Car/Advanced Lane Finding Project/CarND-Advanced-Lane-Lines-master/test_images/straight_lines1.jpg')
 
 road_image_size = (road_image.shape[1], road_image.shape[0])
 img_size = (road_image.shape[1], road_image.shape[0])
 color_binary = pipeline(road_image)
 cv2.imwrite('../test_images/color_binary.png', color_binary)
-# print ("Image saved")
-# cv2.imshow('Color binary', color_binary)
-# cv2.waitKey()
-# #cv2.destroyAllWindws()
+print ("Image saved")
+cv2.imshow('Color binary', color_binary)
+cv2.waitKey()
+#cv2.destroyAllWindws()
 #
-# lChannel = HLScolorspace_LChannel(road_image)
-# cv2.imshow("L channel", lChannel)
-# cv2.waitKey
-#
-# b_channel = LABcolorspace_bChannel(road_image)
-# cv2.imshow("b_channel", b_channel)
-# cv2.waitKey()
+lChannel = HLScolorspace_LChannel(road_image)
+cv2.imshow("L channel", lChannel)
+cv2.waitKey
+
+b_channel = LABcolorspace_bChannel(road_image)
+cv2.imshow("b_channel", b_channel)
+cv2.waitKey()
 
 
 
@@ -221,7 +223,7 @@ cv2.imwrite('../test_images/color_binary.png', color_binary)
 # trapezoid points 1: 255,686; 1044,686; 831,544; 463,544;
 # trapezoid points 2: 255,686; 1044,686; 682,448; 599,448;
 
-# height, width = undist.shape[:2]
+height, width = undist.shape[:2]
 # print("Height:", height, " Width:", width)
 # offest1 = 70
 # # offset2 = 450
@@ -737,8 +739,8 @@ project_video = '../project_video.mp4'
 #clip1 = VideoFileClip(project_video).subclip(38, 42)
 clip1 = VideoFileClip(project_video)
 #print("###################Now running processing frame - video#######")
-processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
-processed_clip1.write_videofile(output_video, audio=False)
+# processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
+# processed_clip1.write_videofile(output_video, audio=False)
 
 # result_process_frame = process_frame(road_image)
 # cv2.imshow("Result processed frame", result_process_frame)
