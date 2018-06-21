@@ -39,7 +39,7 @@ I then used the output `objpoints` and `imgpoints` to compute the camera calibra
 
 Original Image             |  Undistort Image
 :-------------------------:|:-------------------------:
-![](images/calibration2.jpg)|  ![](test_undist2.jpg)
+![](images/calibration2.jpg)|  ![](images/test_undist2.jpg)
 
 
 ### Pipeline (single images)
