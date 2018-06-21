@@ -54,8 +54,8 @@ I apply a triangle shape mask to capture the area directly in front of the car. 
 
 Here's an example of my output for this step. 
 
-Original Image             |  Color Transform Applied |gradient                 |Region of interest mask
-:-------------------------:|:-------------------------:-------------------------:-------------------------
+Original Image             |  Color Transform Applied  |gradient                  |Region of interest mask
+:-------------------------:|:-------------------------:|-------------------------:|-------------------------
 ![](images/test1.jpg)      |![](images/colorChannel.jpg)|![](images/gradient.jpg)| ![](images/regionOfInterest.jpg)
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
