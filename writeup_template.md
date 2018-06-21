@@ -26,12 +26,14 @@ The goals / steps of this project are the following:
 
 ### README
 
+*All references in this readme to lines are for the file called `advanced_lane_finding_project.py`*
+
 
 ### Camera Calibration
 
 #### 1. Camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in lines 1 through 62 of the file called advanced_lane_finding_project.py. 
+The code for this step is contained in lines 1 through 62. 
 
 I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
@@ -44,20 +46,21 @@ Original Image             |  Undistort Image
 
 ### Pipeline (single images)
 
-#### 1. Provide an example of a distortion-corrected image.
+#### 1. Color transforms , gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines 86 through 112, lines 141 to 193). I pick b channel of LAB color space to capture yellow lines (see lines 86 through 98) and the l channel in HLS color space to capture white lines (see line 101 through 112)
 
-#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+I apply a triangle shape mask to capture the area directly in front of the car. This makes intuitive sense as the car is supposed to stay on its own lanes. Situational awareness of lanes that car is not driving on is important but is beyond the scope of this project. The code for this step is 
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+Here's an example of my output for this step. 
 
-![alt text][image3]
+Original Image             |  Color Transform Applied |gradient                 |Region of interest mask
+:-------------------------:|:-------------------------:-------------------------:-------------------------
+![](images/test1.jpg)      |![](images/colorChannel.jpg)|![](images/gradient.jpg)| ![](images/regionOfInterest.jpg)
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform includes a function called `warp(img, src, dst)`, which appears in lines 279 through 282 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
 
 ```python
 src = np.float32(
