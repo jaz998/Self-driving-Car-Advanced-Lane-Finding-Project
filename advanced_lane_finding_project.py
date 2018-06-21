@@ -111,6 +111,25 @@ def HLScolorspace_LChannel(img, thresh=(220,255)):
     # Return a binary image of threshold result
     return  binary_output
 
+def display_data(out_img, left_radius_curvature, right_radius_curvature, centre_distance):
+    out_img = np.copy(out_img)
+    font = cv2.FONT_HERSHEY_DUPLEX
+    height = out_img.shape[0]
+    display_text = 'Left curvature radius: ' + '{:04.2f}'.format(left_radius_curvature)+'m'
+    cv2.putText(out_img, display_text, (40,70), font, 1.5, (200,255,155), 2, cv2.LINE_AA)
+    display_text = 'Right curvature radius: ' + '{:04.2f}'.format(left_radius_curvature)+'m'
+    cv2.putText(out_img, display_text, (40,120), font, 1.5, (200,255,155), 2, cv2.LINE_AA)
+    direction = ''
+    if centre_distance > 0:
+        direction = 'right'
+    elif centre_distance < 0:
+        direction = 'left'
+    abs_center_dist = abs(centre_distance)
+    display_text = '{:04.3f}'.format(abs_center_dist) + 'm ' + direction + ' of center'
+    cv2.putText(out_img, display_text, (40,170), font, 1.5, (200,255,155), 2, cv2.LINE_AA)
+    return out_img
+
+
 
 
 
@@ -391,14 +410,36 @@ def find_lines(binary_warped):
     # plt.show()
 
     # Measuring Curvature
+    ym_per_pix = 30/720 # Lane is 30 meters long
+    xm_per_pix = 3.7/700 # Meters per pixel in x axis, average lane width is 3.7 m, 760 is based on manual pixel measure on the bottom of the screen
     y_eval = np.max(ploty)
-    left_curverad = ((1 + (2 * left_fit[0] * y_eval + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
-    right_curverad = ((1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
+    # left_curverad = ((1 + (2 * left_fit[0] * y_eval*meter_per_pixel_y + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
+    # right_curverad = ((1 + (2 * right_fit[0] * y_eval*meter_per_pixel_y + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
+    # Fit new polynomials to x,y in world space
+
+    print("ploty length", len(ploty))
+    print("leftx lenght", len(leftx))
+    left_fit_cr = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
+    right_fit_cr = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
+    # Calculate the new radii of curvature
+    left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * ym_per_pix + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * left_fit_cr[0])
+    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * right_fit_cr[0])
     print("Left curvature:", left_curverad, " Right Curvature:", right_curverad)
 
+    # Calculate car position from lane centre
+    height = binary_warped.shape[0]
+    car_center_distance = 0
+    if left_fit is not None and right_fit is not None:
+        car_position = binary_warped.shape[1]/2
+        # Getting the x values of the two lanes at the bottom of the screen (closet to the car)
+        left_fit_x_screen_bottom = left_fit[0]*height**2 + left_fit[1]*height + left_fit[2]
+        right_fit_x_screen_bottom = right_fit[0]*height**2 + right_fit[1]*height + right_fit[2]
+        lane_center = (left_fit_x_screen_bottom + right_fit_x_screen_bottom) / 2
+        car_center_distance = (car_position - lane_center)*xm_per_pix
 
-
-    return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds
+    return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds, left_curverad, right_curverad, car_center_distance
 
 
 # results = find_lines(binary_warped)
@@ -476,7 +517,37 @@ def find_lane_based_on_previous_frame (binary_warped, left_fit, right_fit, ploty
     plt.ylim(720, 0)
     # plt.show()
 
-    return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds
+    # Measuring Curvature
+    ym_per_pix = 30 / 720  # Lane is 30 meters long
+    xm_per_pix = 3.7 / 700  # Meters per pixel in x axis, average lane width is 3.7 m, 760 is based on manual pixel measure on the bottom of the screen
+    y_eval = np.max(ploty)
+    # left_curverad = ((1 + (2 * left_fit[0] * y_eval*meter_per_pixel_y + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
+    # right_curverad = ((1 + (2 * right_fit[0] * y_eval*meter_per_pixel_y + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
+    # Fit new polynomials to x,y in world space
+
+    print("ploty length", len(ploty))
+    print("leftx lenght", len(leftx))
+    left_fit_cr = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
+    right_fit_cr = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
+    # Calculate the new radii of curvature
+    left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * ym_per_pix + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * left_fit_cr[0])
+    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * right_fit_cr[0])
+    print("Left curvature:", left_curverad, " Right Curvature:", right_curverad)
+
+    # Calculate car position from lane centre
+    height = binary_warped.shape[0]
+    car_center_distance = 0
+    if left_fit is not None and right_fit is not None:
+        car_position = binary_warped.shape[1] / 2
+        # Getting the x values of the two lanes at the bottom of the screen (closet to the car)
+        left_fit_x_screen_bottom = left_fit[0] * height ** 2 + left_fit[1] * height + left_fit[2]
+        right_fit_x_screen_bottom = right_fit[0] * height ** 2 + right_fit[1] * height + right_fit[2]
+        lane_center = (left_fit_x_screen_bottom + right_fit_x_screen_bottom) / 2
+        car_center_distance = (car_position - lane_center) * xm_per_pix
+
+    return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds, left_curverad, right_curverad, car_center_distance
 #
 # nextFrame_results = find_lane_based_on_previous_frame(binary_warped, left_fit, right_fit)
 # print("left_fit", left_fit)
@@ -601,7 +672,11 @@ def process_frame(frame):
         right_fitx = results[5]
         left_lane_inds = results[6]
         right_lane_inds = results[7]
+        left_radius_curvature = results[8]
+        right_radius_curvature = results[9]
+        car_centre_distance = results[10]
         draw_on_original = draw_lines_on_original(frame, binary_warped, ploty, left_fitx, right_fitx, MinV)
+        draw_on_original_with_data = display_data(draw_on_original, left_radius_curvature, right_radius_curvature, car_centre_distance)
     else:
         print("Process frame that is based on the previous frame is called")
         print("calling pipeline function")
@@ -618,14 +693,18 @@ def process_frame(frame):
         right_fitx = results[5]
         left_lane_inds = results[6]
         right_lane_inds = results[7]
+        left_radius_curvature = results[8]
+        right_radius_curvature = results[9]
+        car_centre_distance = results[10]
         draw_on_original = draw_lines_on_original(frame, binary_warped, ploty, left_fitx, right_fitx, MinV)
+        draw_on_original_with_data = display_data(draw_on_original, left_radius_curvature, right_radius_curvature, car_centre_distance)
     left_lane.add_fit_lines(left_fit, left_lane_inds)
     print("left_fit ", left_fit)
     print("left_lane_inds", left_lane_inds)
     right_lane.add_fit_lines(right_fit, right_lane_inds)
     print("Frame ", frameCount)
     frameCount = frameCount + 1
-    return draw_on_original
+    return draw_on_original_with_data
 
 
 # color_binary = pipeline(frame)
