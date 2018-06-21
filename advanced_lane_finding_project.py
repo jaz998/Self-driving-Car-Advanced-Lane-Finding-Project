@@ -85,8 +85,8 @@ def region_of_interest(img, vertices):
 
 #LAB Colorspace, use B channel to capture yellow line
 def LABcolorspace_bChannel(img, thresh=(190,255)):
-    lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
-    #lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab)
+    #lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab)
 
     b_channel = lab[:,:,2]
     # Only normalize when there are yellows in the image
@@ -100,8 +100,8 @@ def LABcolorspace_bChannel(img, thresh=(190,255)):
 #HLS Colorspace, use L channel to capture the white lines
 def HLScolorspace_LChannel(img, thresh=(220,255)):
     # Convert the image to HLS color space
-    hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
-    #hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    #hls = cv2.cvtColor(img, cv2.COLOR_BGR2HLS)
+    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     lChannel = hls[:,:,1]
     # Normalize
     lChannel = lChannel*(255/np.max(lChannel))
@@ -197,19 +197,19 @@ road_image = cv2.imread('../test_images/test1.jpg')
 road_image_size = (road_image.shape[1], road_image.shape[0])
 img_size = (road_image.shape[1], road_image.shape[0])
 color_binary = pipeline(road_image)
-cv2.imwrite('../test_images/color_binary.png', color_binary)
-print ("Image saved")
-cv2.imshow('Color binary', color_binary)
-cv2.waitKey()
+# cv2.imwrite('../test_images/color_binary.png', color_binary)
+# print ("Image saved")
+# cv2.imshow('Color binary', color_binary)
+# cv2.waitKey()
 #cv2.destroyAllWindws()
 #
-lChannel = HLScolorspace_LChannel(road_image)
-cv2.imshow("L channel", lChannel)
-cv2.waitKey
-
-b_channel = LABcolorspace_bChannel(road_image)
-cv2.imshow("b_channel", b_channel)
-cv2.waitKey()
+# lChannel = HLScolorspace_LChannel(road_image)
+# cv2.imshow("L channel", lChannel)
+# cv2.waitKey
+#
+# b_channel = LABcolorspace_bChannel(road_image)
+# cv2.imshow("b_channel", b_channel)
+# cv2.waitKey()
 
 
 
@@ -293,17 +293,17 @@ def warp(img, src, dst):
 # src = np.float32([(599,448), (682, 448), (1044,686), (255,686)])
 
 M = cv2.getPerspectiveTransform(src, dst)
-road_image2 = cv2.imread('../test_images/straight_lines1.jpg')
-warped = cv2.warpPerspective(color_binary, M, (color_binary.shape[1], color_binary.shape[0]))
-warped = warp(color_binary, src, dst)
-#cv2.imwrite('./images/warped.png', warped)
-cv2.imshow('warped', warped)
-cv2.waitKey()
-cv2.destroyAllWindows()
-cv2.imshow('Color_binary', warped)
-print("warped shape ", warped.shape)
-binary_warped = warped[:,:,1]
-cv2.imshow('binary_warped', binary_warped)
+# road_image2 = cv2.imread('../test_images/straight_lines1.jpg')
+# warped = cv2.warpPerspective(color_binary, M, (color_binary.shape[1], color_binary.shape[0]))
+# warped = warp(color_binary, src, dst)
+# #cv2.imwrite('./images/warped.png', warped)
+# cv2.imshow('warped', warped)
+# cv2.waitKey()
+# cv2.destroyAllWindows()
+# cv2.imshow('Color_binary', warped)
+# print("warped shape ", warped.shape)
+# binary_warped = warped[:,:,1]
+# cv2.imshow('binary_warped', binary_warped)
 
 
 
@@ -324,7 +324,7 @@ def find_lines(binary_warped):
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[binary_warped.shape[0] // 2:, :], axis=0)
     plt.plot(histogram)
-    plt.show()
+    #plt.show()
     # Create an output image to draw on and  visualize the result
     out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
     # Find the peak of the left and right halves of the histogram
@@ -444,19 +444,19 @@ def find_lines(binary_warped):
     return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds, left_curverad, right_curverad, car_center_distance
 
 
-results = find_lines(binary_warped)
-output_image = results[0]
-left_fit = results[1]
-right_fit = results[2]
-ploty = results[3]
-left_fitx = results[4]
-right_fitx = results[5]
-left_lane_inds = results[6]
-right_lane_inds = results[7]
-
-cv2.imshow('Find lane', output_image)
-cv2.imwrite('./images/findLane.png', output_image)
-cv2.waitKey()
+# results = find_lines(binary_warped)
+# output_image = results[0]
+# left_fit = results[1]
+# right_fit = results[2]
+# ploty = results[3]
+# left_fitx = results[4]
+# right_fitx = results[5]
+# left_lane_inds = results[6]
+# right_lane_inds = results[7]
+#
+# cv2.imshow('Find lane', output_image)
+# cv2.imwrite('./images/findLane.png', output_image)
+# cv2.waitKey()
 
 
 def find_lane_based_on_previous_frame (binary_warped, left_fit, right_fit, ploty = None):
@@ -633,10 +633,10 @@ def draw_lines_on_original(road_image, warped, ploty, left_fitx, right_fitx, Min
 
 
 #
-draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
-cv2.imshow("Draw on original", draw_on_original)
-cv2.waitKey()
-cv2.imwrite('./images/plot_on_road.png', draw_on_original)
+# draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+# cv2.imshow("Draw on original", draw_on_original)
+# cv2.waitKey()
+# cv2.imwrite('./images/plot_on_road.png', draw_on_original)
 
 
 ############# Process the video #####################################
@@ -742,8 +742,8 @@ project_video = '../project_video.mp4'
 #clip1 = VideoFileClip(project_video).subclip(38, 42)
 clip1 = VideoFileClip(project_video)
 #print("###################Now running processing frame - video#######")
-# processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
-# processed_clip1.write_videofile(output_video, audio=False)
+processed_clip1 = clip1.fl_image(process_frame) #NOTE: this function expects color images!!
+processed_clip1.write_videofile(output_video, audio=False)
 
 # result_process_frame = process_frame(road_image)
 # cv2.imshow("Result processed frame", result_process_frame)
