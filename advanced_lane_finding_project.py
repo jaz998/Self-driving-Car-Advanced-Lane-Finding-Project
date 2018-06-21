@@ -149,9 +149,7 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
     lab_bChannel = LABcolorspace_bChannel(img)
     combined = np.zeros_like(hls_lChannel)
     combined[(hls_lChannel==1) | (lab_bChannel==1)] = 1
-    cv2.imshow('Combined', combined)
-    cv2.waitKey()
-    cv2.imwrite('./images/colorChannel.jpg', combined)
+
 
     # Sobel x
     #sobelx = cv2.Sobel(l_channel, cv2.CV_64F, 1, 0) # take the derivative in x
@@ -172,7 +170,6 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
 
     # stack each channel
     color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binnary))*255
-    cv2.imwrite('./images/gradient.jpg', color_binary)
 
 
 
@@ -191,7 +188,6 @@ def pipeline(img, s_thresh=(170,255), sx_thresh=(20,100)):
                           inner_apex1, inner_apex2, inner_left_bottom]], dtype=np.int32)
     # Masked area
     color_binary = region_of_interest(color_binary, vertices)
-    cv2.imwrite('./images/regionOfInterest.jpg', color_binary)
     return color_binary
 
 
@@ -222,6 +218,12 @@ cv2.waitKey()
 # Manually find four points representing a trapezoid in color_binary while they should be two straight lines
 # trapezoid points 1: 255,686; 1044,686; 831,544; 463,544;
 # trapezoid points 2: 255,686; 1044,686; 682,448; 599,448;
+
+#src = np.float32([(255,686), (1044,686), (831, 544), (463,544)])
+#dst = np.float32([(255,686), (1044,686), (1044,544), (255,544)])
+
+#src = np.float32([(255,686), (1044,686), (682, 448), (599,448)])
+#dst = np.float32([(255,686), (1044,686), (1044,448), (255,448)])
 
 height, width = undist.shape[:2]
 # print("Height:", height, " Width:", width)
@@ -274,6 +276,7 @@ dst = np.float32([(450,0),
                   (450,height),
                   (width-450,height)])
 
+
 MinV = cv2.getPerspectiveTransform(dst, src)
 
 
@@ -284,26 +287,23 @@ def warp(img, src, dst):
     return warped
 
 
-#src = np.float32([(255,686), (1044,686), (831, 544), (463,544)])
-#dst = np.float32([(255,686), (1044,686), (1044,544), (255,544)])
 
-#src = np.float32([(255,686), (1044,686), (682, 448), (599,448)])
-#dst = np.float32([(255,686), (1044,686), (1044,448), (255,448)])
 
 # src points in the order of top left, top right, bottom right, bottom left
 # src = np.float32([(599,448), (682, 448), (1044,686), (255,686)])
 
-# M = cv2.getPerspectiveTransform(src, dst)
-# warped = cv2.warpPerspective(color_binary, M, (color_binary.shape[1], color_binary.shape[0]))
-# warped = warp(color_binary, src, dst)
-# cv2.imwrite('../test_images/warped.png', warped)
-# cv2.imshow('warped', warped)
-# cv2.waitKey()
-# cv2.destroyAllWindows()
-# cv2.imshow('Color_binary', warped)
-# print("warped shape ", warped.shape)
-# binary_warped = warped[:,:,1]
-# cv2.imshow('binary_warped', binary_warped)
+M = cv2.getPerspectiveTransform(src, dst)
+road_image2 = cv2.imread('../test_images/straight_lines1.jpg')
+warped = cv2.warpPerspective(color_binary, M, (color_binary.shape[1], color_binary.shape[0]))
+warped = warp(color_binary, src, dst)
+#cv2.imwrite('./images/warped.png', warped)
+cv2.imshow('warped', warped)
+cv2.waitKey()
+cv2.destroyAllWindows()
+cv2.imshow('Color_binary', warped)
+print("warped shape ", warped.shape)
+binary_warped = warped[:,:,1]
+cv2.imshow('binary_warped', binary_warped)
 
 
 
@@ -444,18 +444,19 @@ def find_lines(binary_warped):
     return out_img, left_fit, right_fit, ploty, left_fitx, right_fitx, left_lane_inds, right_lane_inds, left_curverad, right_curverad, car_center_distance
 
 
-# results = find_lines(binary_warped)
-# output_image = results[0]
-# left_fit = results[1]
-# right_fit = results[2]
-# ploty = results[3]
-# left_fitx = results[4]
-# right_fitx = results[5]
-# left_lane_inds = results[6]
-# right_lane_inds = results[7]
-#
-# cv2.imshow('Find lane', output_image)
-# cv2.waitKey()
+results = find_lines(binary_warped)
+output_image = results[0]
+left_fit = results[1]
+right_fit = results[2]
+ploty = results[3]
+left_fitx = results[4]
+right_fitx = results[5]
+left_lane_inds = results[6]
+right_lane_inds = results[7]
+
+cv2.imshow('Find lane', output_image)
+cv2.imwrite('./images/findLane.png', output_image)
+cv2.waitKey()
 
 
 def find_lane_based_on_previous_frame (binary_warped, left_fit, right_fit, ploty = None):
@@ -632,9 +633,11 @@ def draw_lines_on_original(road_image, warped, ploty, left_fitx, right_fitx, Min
 
 
 #
-# draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
-# cv2.imshow("Draw on original", draw_on_original)
-# cv2.waitKey()
+draw_on_original = draw_lines_on_original(road_image, binary_warped, ploty, left_fitx, right_fitx, MinV)
+cv2.imshow("Draw on original", draw_on_original)
+cv2.waitKey()
+cv2.imwrite('./images/plot_on_road.png', draw_on_original)
+
 
 ############# Process the video #####################################
 left_lane = Line()
