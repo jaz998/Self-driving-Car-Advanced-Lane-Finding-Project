@@ -107,7 +107,7 @@ Plotted on road             |
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [https://github.com/jaz998/Self-driving-Car-Advanced-Lane-Finding-Project/tree/master/video](video./project_video.mp4)
+Here's a [https://github.com/jaz998/Self-driving-Car-Advanced-Lane-Finding-Project/blob/master/video/output_video.mp4](video./project_video.mp4)
 
 ---
 
